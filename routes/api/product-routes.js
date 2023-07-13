@@ -7,12 +7,37 @@ const { Product, Category, Tag, ProductTag } = require('../../models');
 router.get('/', (req, res) => {
   // find all products
   // be sure to include its associated Category and Tag data
+  Product.findAll({
+    include: [
+      {model: Category},
+      {model: Tag}
+    ]
+  }).then(products => res.send(products))
 });
 
 // get one product
 router.get('/:id', (req, res) => {
   // find a single product by its `id`
   // be sure to include its associated Category and Tag data
+  const productId = req.params.id;
+
+  Product.findByPk(productId, {
+    include: [
+      {model: Category},
+      {model: Tag}
+    ]
+  })
+    .then(product => {
+      if (!product) {
+        return res.status(404).json({ error: 'product not found' });
+      }
+
+      res.send(product);
+    })
+    .catch(error => {
+      console.error('Error retrieving product:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    });
 });
 
 // create new product
@@ -92,8 +117,26 @@ router.put('/:id', (req, res) => {
     });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async(req, res) => {
   // delete one product by its `id` value
+  const productId = req.params.id
+  try {
+    const deletedProductCount = await Product.destroy({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (deletedProductCount === 0) {
+      // No product was found with the given ID
+      return res.status(404).json({ error: 'product not found' });
+    }
+
+    res.json({ message: 'product deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 module.exports = router;
